@@ -21,14 +21,14 @@ st.set_page_config(
 
 st.title("💰 QUẢN LÝ LƯƠNG VÀ THUẾ TNCN - NGUYỄN CHÍ THANH")
 st.caption(
-    "Tính lương tối đa 500 nhân viên, xuất Excel và gửi "
-    "phiếu lương riêng qua email."
+    "Tính lương tối đa 500 nhân viên, xuất Excel và gửi phiếu lương riêng qua"
+    " email."
 )
 
 st.warning(
     "Ứng dụng giữ công thức thuế và mức giảm trừ theo code ban đầu. "
-    "Cần cập nhật quy định pháp luật hiện hành trước khi dùng để "
-    "tính lương chính thức."
+    "Cần cập nhật quy định pháp luật hiện hành trước khi dùng để tính lương"
+    " chính thức."
 )
 
 
@@ -38,7 +38,6 @@ st.warning(
 
 
 def tinh_thue_tncn(thu_nhap_tinh_thue):
-  # Thu nhập tính thuế <= 0 thì không phát sinh thuế.
   if thu_nhap_tinh_thue <= 0:
     return 0.0
   elif thu_nhap_tinh_thue <= 10:
@@ -87,9 +86,7 @@ def dinh_dang_sheet(ws):
 
   for cell in ws[1]:
     cell.font = Font(bold=True, color="FFFFFF")
-    cell.fill = PatternFill(
-        fill_type="solid", fgColor="1F4E78"
-    )  # xanh navy xám
+    cell.fill = PatternFill(fill_type="solid", fgColor="1F4E78")
     cell.alignment = Alignment(
         horizontal="center", vertical="center", wrap_text=True
     )
@@ -247,12 +244,8 @@ def tao_excel_tong_hop(bang):
   })
 
   with pd.ExcelWriter(output, engine="openpyxl") as writer:
-    chi_tiet.to_excel(
-        writer, sheet_name="Bang luong chi tiet", index=False
-    )
-    tong_hop.to_excel(
-        writer, sheet_name="Tong hop quy luong", index=False
-    )
+    chi_tiet.to_excel(writer, sheet_name="Bang luong chi tiet", index=False)
+    tong_hop.to_excel(writer, sheet_name="Tong hop quy luong", index=False)
 
     dinh_dang_sheet(writer.sheets["Bang luong chi tiet"])
     dinh_dang_sheet(writer.sheets["Tong hop quy luong"])
@@ -286,7 +279,7 @@ def tao_excel_tong_hop(bang):
 
 
 # =========================================================
-# 6. GỬI EMAIL KÈM PHIẾU LƯƠNG
+# 6. GỬI EMAIL KÈM PHIẾU LƯƠNG (ĐÃ TỐI ƯU VÀ BẮT LỖI)
 # =========================================================
 
 
@@ -304,43 +297,47 @@ def gui_email_luong(
 ):
   msg = EmailMessage()
 
-  # Thay thế biến tự động nếu người dùng có nhập {ho_ten} hoặc {ma_nv} trong tiêu đề/nội dung
-  tieu_de_formatted = tieu_de_mail.format(ho_ten=ho_ten or ma_nv, ma_nv=ma_nv)
-  noi_dung_formatted = noi_dung_mail.format(
-      ho_ten=ho_ten or ma_nv, ma_nv=ma_nv
+  # Xử lý thay thế từ khóa an toàn không bị lỗi chuỗi
+  ten_hien_thi = ho_ten if ho_ten else ma_nv
+  tieu_de_final = tieu_de_mail.replace("{ho_ten}", ten_hien_thi).replace(
+      "{ma_nv}", ma_nv
+  )
+  noi_dung_final = noi_dung_mail.replace("{ho_ten}", ten_hien_thi).replace(
+      "{ma_nv}", ma_nv
   )
 
-  msg["Subject"] = tieu_de_formatted
+  msg["Subject"] = tieu_de_final
   msg["From"] = email_cong_ty
   msg["To"] = email_nhan
 
-  msg.set_content(noi_dung_formatted)
+  msg.set_content(noi_dung_final)
 
   msg.add_attachment(
       file_excel,
       maintype="application",
       subtype=(
-          "vnd.openxmlformats-officedocument."
-          "spreadsheetml.sheet"
+          "vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       ),
       filename=f"Phieu_luong_{ma_nv}.xlsx",
   )
 
+  # Đảm bảo mật khẩu không chứa khoảng trắng dư thừa
+  mat_khau_clean = str(mat_khau).replace(" ", "").strip()
+
+  context = ssl.create_default_context()
+
   if int(smtp_port) == 465:
     with smtplib.SMTP_SSL(
-        smtp_server,
-        int(smtp_port),
-        context=ssl.create_default_context(),
-        timeout=30,
+        smtp_server, int(smtp_port), context=context, timeout=20
     ) as server:
-      server.login(email_cong_ty, mat_khau)
+      server.login(email_cong_ty, mat_khau_clean)
       server.send_message(msg)
   else:
-    with smtplib.SMTP(smtp_server, int(smtp_port), timeout=30) as server:
+    with smtplib.SMTP(smtp_server, int(smtp_port), timeout=20) as server:
       server.ehlo()
-      server.starttls(context=ssl.create_default_context())
+      server.starttls(context=context)
       server.ehlo()
-      server.login(email_cong_ty, mat_khau)
+      server.login(email_cong_ty, mat_khau_clean)
       server.send_message(msg)
 
 
@@ -533,8 +530,7 @@ if "ket_qua_bang_luong" in st.session_state:
       data=tao_excel_tong_hop(bang_kq),
       file_name="Bang_luong_tong_hop.xlsx",
       mime=(
-          "application/vnd.openxmlformats-officedocument."
-          "spreadsheetml.sheet"
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       ),
       use_container_width=True,
   )
@@ -592,8 +588,7 @@ if "ket_qua_bang_luong" in st.session_state:
       data=tao_bao_cao_ca_nhan(nv_chon),
       file_name=f"Phieu_luong_{ma_chon}.xlsx",
       mime=(
-          "application/vnd.openxmlformats-officedocument."
-          "spreadsheetml.sheet"
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       ),
       use_container_width=True,
   )
@@ -609,39 +604,43 @@ if "ket_qua_bang_luong" in st.session_state:
   st.divider()
   st.header("5. Gửi phiếu lương qua email")
 
-  st.info(
-      "Mật khẩu chỉ tồn tại trong phiên làm việc hiện tại và không ghi vào"
-      " file Excel.\n"
-      "Yêu cầu: Nhập **Mật khẩu ứng dụng (App Password)** 16 ký tự của tài"
-      " khoản nppthienngoc@gmail.com."
+  st.error(
+      "⚠️ **LƯU Ý BẮT BUỘC:** Mật khẩu nhập dưới đây phải là **Mật khẩu ứng"
+      " dụng (App Password) 16 ký tự** được tạo từ Google Account. KHÔNG DÙNG"
+      " mật khẩu đăng nhập Gmail thông thường."
   )
 
   with st.form("form_gui_luong"):
 
-    # Cố định địa chỉ Gmail người gửi theo yêu cầu
     email_cong_ty = st.text_input(
         "Email gửi thư", value="nppthienngoc@gmail.com", disabled=True
     ).strip()
 
-    # Cấu hình mặc định SMTP Gmail
-    smtp_server = "smtp.gmail.com"
-    smtp_port = 587
+    col_smtp1, col_smtp2 = st.columns([3, 1])
+
+    with col_smtp1:
+      smtp_server = st.text_input("Máy chủ SMTP", value="smtp.gmail.com")
+
+    with col_smtp2:
+      smtp_port = st.number_input(
+          "Cổng SMTP", min_value=1, max_value=65535, value=587, step=1
+      )
 
     mat_khau = st.text_input(
-        "Mật khẩu ứng dụng (App Password) của nppthienngoc@gmail.com",
+        "Mật khẩu ứng dụng (App Password) 16 ký tự",
         type="password",
         help=(
-            "Nhập Mật khẩu ứng dụng 16 ký tự được tạo từ trang Quản lý Tài khoản"
-            " Google -> Bảo mật -> Xác minh 2 bước -> Mật khẩu ứng dụng."
+            "Tạo tại: myaccount.google.com -> Bảo mật -> Xác minh 2 bước -> Mật"
+            " khẩu ứng dụng."
         ),
     )
 
-    st.subheader("Nội dung email tùy chỉnh gửi đến nhân viên")
+    st.subheader("Nội dung email gửi nhân viên")
 
     tieu_de_mail = st.text_input(
         "Tiêu đề email",
         value="Phiếu lương cá nhân - {ma_nv}",
-        help="Có thể dùng {ho_ten} hoặc {ma_nv} để tự động điền thông tin.",
+        help="Dùng {ho_ten} hoặc {ma_nv} để tự động thay thế.",
     )
 
     noi_dung_mac_dinh = """Kính gửi {ho_ten},
@@ -659,7 +658,7 @@ Phòng Nhân sự"""
         "Nội dung email",
         value=noi_dung_mac_dinh,
         height=180,
-        help="Có thể dùng {ho_ten} hoặc {ma_nv} để tự động thay thế.",
+        help="Dùng {ho_ten} hoặc {ma_nv} để tự động thay thế.",
     )
 
     danh_sach_nhan = bang_gui[
@@ -696,7 +695,7 @@ Phòng Nhân sự"""
 
         ma_nv_chon = nv_gui_chon["Mã nhân viên"]
       else:
-        st.warning("Chưa có email nhân viên hợp lệ.")
+        st.warning("Chưa có email nhân viên hợp lệ trong bảng.")
 
     xac_nhan_gui = st.checkbox(
         "Tôi đã kiểm tra danh sách người nhận và xác nhận "
@@ -716,10 +715,10 @@ Phòng Nhân sự"""
       )
 
     elif not xac_nhan_gui:
-      st.error("Bạn phải xác nhận danh sách người nhận.")
+      st.error("Bạn phải tích chọn ô xác nhận danh sách người nhận.")
 
     elif danh_sach_nhan.empty:
-      st.error("Không có nhân viên nào có email hợp lệ.")
+      st.error("Không có nhân viên nào có địa chỉ email hợp lệ.")
 
     else:
       if pham_vi_gui == "Gửi cho một nhân viên":
@@ -759,16 +758,27 @@ Phòng Nhân sự"""
               "Họ và tên": ho_ten,
               "Email": email_nhan,
               "Kết quả": "Thành công",
-              "Chi tiết": "Máy chủ SMTP đã chấp nhận email",
+              "Chi tiết": "Email đã gửi thành công.",
           })
 
+        except smtplib.SMTPAuthenticationError:
+          ket_qua_gui.append({
+              "Mã nhân viên": ma_nv,
+              "Họ và tên": ho_ten,
+              "Email": email_nhan,
+              "Kết quả": "Thất bại",
+              "Chi tiết": (
+                  "Lỗi xác thực (535): Mật khẩu ứng dụng sai hoặc chưa tạo App"
+                  " Password trên Google."
+              ),
+          })
         except Exception as e:
           ket_qua_gui.append({
               "Mã nhân viên": ma_nv,
               "Họ và tên": ho_ten,
               "Email": email_nhan,
               "Kết quả": "Thất bại",
-              "Chi tiết": str(e)[:300],
+              "Chi tiết": f"Lỗi: {str(e)}",
           })
 
         tien_trinh.progress(i / len(danh_sach_can_gui))
@@ -779,13 +789,19 @@ Phòng Nhân sự"""
 
       thanh_cong = (df_gui["Kết quả"] == "Thành công").sum()
 
-      st.success(
-          f"Hoàn tất: {thanh_cong} thành công, {len(df_gui) - thanh_cong} thất"
-          " bại."
-      )
+      if thanh_cong > 0:
+        st.success(
+            f"Hoàn tất: {thanh_cong} thành công, {len(df_gui) - thanh_cong}"
+            " thất bại."
+        )
+      else:
+        st.error(
+            "Gửi email thất bại hoàn toàn! Vui lòng kiểm tra chi tiết lỗi bên"
+            " dưới bảng kết quả."
+        )
 
   if "ket_qua_gui_email" in st.session_state:
-    st.subheader("Kết quả gửi email")
+    st.subheader("Bảng chi tiết kết quả gửi email")
 
     st.dataframe(
         st.session_state["ket_qua_gui_email"],
