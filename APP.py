@@ -22,7 +22,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("💰 QUẢN LÝ LƯƠNG VÀ THUẾ TNCN")
+st.title("💰 QUẢN LÝ LƯƠNG VÀ THUẾ TNCN - NGUYỄN CHÍ THANH")
 st.caption(
     "Tính lương tối đa 500 nhân viên, xuất Excel và gửi "
     "phiếu lương riêng qua email."
